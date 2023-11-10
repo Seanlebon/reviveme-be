@@ -37,7 +37,9 @@ Or using an environment variable:
 ## Setting Up Postgres
 ### Linux(WSL):
 First Download Postgres along with postgres-contriblib for some useful tools:
+
     sudo apt install postgresql postgresql-contrib
+    
 Then download the python adaptor for postgres **psycopg2**
 **1.  Download a C compiler, to do so you can use:**
 
