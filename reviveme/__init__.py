@@ -3,6 +3,5 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 app.config.from_pyfile("../config.py")
-db = SQLAlchemy(app)
 
-from reviveme_server import routes
+from reviveme import routes

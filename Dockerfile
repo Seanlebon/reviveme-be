@@ -1,5 +1,5 @@
 #builder stage
-FROM python:3.12.0-slim-bullseye as builder
+FROM python:3.11.6-slim-bullseye as builder
 
 RUN apt-get update \
     && apt-get -y install libpq-dev gcc 
@@ -13,7 +13,7 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
 #operational stage
-FROM python:3.12.0-slim-bullseye
+FROM python:3.11.6-slim-bullseye
 
 RUN apt-get update \
     && apt-get -y install libpq-dev gcc && \

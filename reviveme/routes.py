@@ -1,4 +1,4 @@
-from reviveme_server import app
+from reviveme import app
 
 
 @app.route("/")
