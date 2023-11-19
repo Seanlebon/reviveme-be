@@ -1,3 +1,4 @@
+# Setup Guide
 ## Set Up Flask App 
 **1. Make sure Python 3 is installed:**
 
@@ -57,3 +58,21 @@ Then download the python adaptor for postgres **psycopg2**
 if there is an error then make sure to add it to path:
 
      export PATH=/usr/lib/postgresql/X.Y/bin/:$PATH
+
+# Development Guide
+## Creating tables for your models
+The flask_sqlalchemy module provides a way to easily create a new table for any new models you define:
+
+Open the flask shell by running the following from the root of the project:
+```sh
+flask shell
+```
+
+Then run the following lines:
+```py
+from reviveme_server import db
+from reviveme_server.models.models import *
+db.create_all()
+```
+
+Note that the `create_all` function won't recreate or update any tables that have already been created. If you make a mistake creating your new model and need to update it, you'll have to drop the table and run `db.create_all()` again. Avoid doing this to update any models we've already committed though; create a database migration instead.
