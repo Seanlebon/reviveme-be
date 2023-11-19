@@ -6,7 +6,7 @@
 If not install it using this command **(this will also install pip)**:
       Note: Do not install python3.12 as there are issues with pip in that version
       
-      sudo apt-get install python3.11 python3-pip
+      sudo apt-get install python3.11.6 python3-pip
       alias python=python3
 
 **2. Create a virtual environment:**
