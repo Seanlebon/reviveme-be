@@ -2,15 +2,15 @@ from sqlalchemy import String
 from sqlalchemy import ForeignKey
 from sqlalchemy import Text
 
-from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
 
-class Base(DeclarativeBase):
-    pass
+from typing import List
 
-class User(Base):
+from reviveme_server import db
+
+class User(db.Model):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(120), unique=True)
@@ -20,24 +20,26 @@ class User(Base):
     def __repr__(self):
         return f"<User id={self.id!r}, email={self.email!r}>"
     
-class Thread(Base):
+class Thread(db.Model):
     __tablename__ = "threads"
     id: Mapped[int] = mapped_column(primary_key=True)
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     title: Mapped[str] = mapped_column(String(120))
     content: Mapped[str] = mapped_column(String(10000))
     
-    # TODO: add relationship() between all models (must be done in both directions)
+    comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="thread")
 
     def __repr__(self):
         return f"<Thread id={self.id!r}, title={self.title!r}, author_id={self.author_id!r}>"
 
-class Comment(Base):
+class Comment(db.Model):
     __tablename__ = "comments"
     id: Mapped[int] = mapped_column(primary_key=True)
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     thread_id: Mapped[int] = mapped_column(ForeignKey("threads.id"))
     content: Mapped[str] = mapped_column(Text)
+
+    thread: Mapped["Thread"] = relationship("Thread", back_populates="comments")
 
     def __repr__(self):
         return f"<Comment id={self.id!r}, author_id={self.author_id!r}, thread_id={self.thread_id!r} content={self.content!r}>"
