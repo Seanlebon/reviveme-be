@@ -32,6 +32,9 @@ class Thread(db.Model):
     def __repr__(self):
         return f"<Thread id={self.id!r}, title={self.title!r}, author_id={self.author_id!r}>"
 
+    def serialize(self):
+        return { 'id': self.id, 'author_id': self.author_id, 'title': self.title, 'content': self.content }
+
 class Comment(db.Model):
     __tablename__ = "comments"
     id: Mapped[int] = mapped_column(primary_key=True)
