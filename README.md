@@ -70,9 +70,16 @@ flask shell
 
 Then run the following lines:
 ```py
-from reviveme_server import db
-from reviveme_server.models.models import *
+from reviveme import db
+from reviveme import models
 db.create_all()
 ```
 
 Note that the `create_all` function won't recreate or update any tables that have already been created. If you make a mistake creating your new model and need to update it, you'll have to drop the table and run `db.create_all()` again. Avoid doing this to update any models we've already committed though; create a database migration instead.
+
+##Running Scripts
+
+To run scripts from the app use:
+```
+python -m reviveme.scripts.{script_to_run}
+```

@@ -14,4 +14,8 @@ def create_app():
 
     app.register_blueprint(v1_bp, url_prefix="/api/v1")
 
+    @app.route("/")
+    def index():
+        return "suffix URL with /api/v1/{route} to use API"
+
     return app
