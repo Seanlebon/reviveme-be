@@ -46,18 +46,18 @@ Then download the python adaptor for postgres **psycopg2**
 
 **1.  Download a C compiler, to do so you can use:**
 
-      sudo apt install build-essential
+    sudo apt install build-essential
       
 **2.  Then make sure **libpq** header files are installed:**
 
-      sudo apt install libpq-dev
+    sudo apt install libpq-dev
 **3.  Confirm the **pg_config** program is installed:**
 
-      pg_config --version
+    pg_config --version
       
 if there is an error then make sure to add it to path:
 
-     export PATH=/usr/lib/postgresql/X.Y/bin/:$PATH
+    export PATH=/usr/lib/postgresql/X.Y/bin/:$PATH
 
 # Development Guide
 ## Creating tables for your models
@@ -76,7 +76,21 @@ db.create_all()
 ```
 
 Note that the `create_all` function won't recreate or update any tables that have already been created. If you make a mistake creating your new model and need to update it, you'll have to drop the table and run `db.create_all()` again. Avoid doing this to update any models we've already committed though; create a database migration instead.
+## Creating and Running Migrations
+The flask_migrate module allows us to easily generate migrations and run them with ease
+To create migration scripts from the app automatically use:
+```
+flask db migrate
+OR
+flask db migrate -m "{table_name} table"
+```
+These commands will generate the migration scripts and must be incorporated via source control
 
+To apply the changes use:
+```
+flask db upgrade
+```
+For more info on using migration commands refer to this [blog](https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-iv-database)
 ## Running Scripts
 
 To run scripts from the app use:
