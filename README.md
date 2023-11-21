@@ -78,7 +78,8 @@ db.create_all()
 Note that the `create_all` function won't recreate or update any tables that have already been created. If you make a mistake creating your new model and need to update it, you'll have to drop the table and run `db.create_all()` again. Avoid doing this to update any models we've already committed though; create a database migration instead.
 ## Creating and Running Migrations
 The flask_migrate module allows us to easily generate migrations and run them with ease
-To create migration scripts from the app automatically use:
+
+**To create migration scripts from the app automatically use:**
 ```
 flask db migrate
 OR
@@ -86,7 +87,7 @@ flask db migrate -m "{table_name} table"
 ```
 These commands will generate the migration scripts and must be incorporated via source control
 
-To apply the changes use:
+**To apply the changes use:**
 ```
 flask db upgrade
 ```
