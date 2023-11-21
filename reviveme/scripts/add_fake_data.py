@@ -1,5 +1,3 @@
-import os
-
 from reviveme import create_app
 from reviveme.extensions import db
 from reviveme.models import Comment, Thread, User
