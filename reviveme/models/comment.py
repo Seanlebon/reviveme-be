@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from reviveme.extensions import db
+from reviveme.db import db
 
 
 class Comment(db.Model):

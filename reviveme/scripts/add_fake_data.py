@@ -6,7 +6,7 @@ from flask_migrate import upgrade
 
 from config import FLASK_APP
 from reviveme import create_app
-from reviveme.extensions import db
+from reviveme.db import db
 from reviveme.models import Comment, Thread, User
 
 logging.basicConfig(
