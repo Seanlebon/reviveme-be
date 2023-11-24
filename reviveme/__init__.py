@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_migrate import Migrate
 
-from reviveme.extensions import db
+from reviveme.db import db
 
 
 def create_app():
