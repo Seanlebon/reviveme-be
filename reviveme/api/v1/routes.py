@@ -19,12 +19,12 @@ def index():
 def thread_list():
     # TODO: figure out how to serialize our models properly
     threads = db.session.execute(db.select(Thread)).scalars().all()
-    return [{"id": thread.id, "author_id": thread.author_id, "title": thread.title, "content": thread.content} for thread in threads]
+    return [thread.serialize() for thread in threads]
 
 @bp.route("/threads/<int:id>", methods=["GET"])
 def thread_detail(id):
     thread = db.get_or_404(Thread, id)
-    return {"id": thread.id, "author_id": thread.author_id, "title": thread.title, "content": thread.content}
+    return thread.serialize()
 
 @bp.route("/threads", methods=["POST"])
 def thread_create():
@@ -56,12 +56,12 @@ def thread_delete(id):
 @bp.route("/threads/<int:thread_id>/comments", methods=["GET"])
 def comment_list(thread_id):
     comments = db.session.execute(db.select(Comment).where(Comment.thread_id == thread_id)).scalars().all()
-    return [{"id": comment.id, "content": comment.content} for comment in comments]
+    return [comment.serialize() for comment in comments]
 
 @bp.route("/comments/<int:comment_id>", methods=["GET"])
 def comment_detail(comment_id):
     comment = db.get_or_404(Comment, comment_id)
-    return {"id": comment.id, "content": comment.content}
+    return comment.serialize()
 
 @bp.route("/threads/<int:thread_id>/comments", methods=["POST"])
 def comment_create(thread_id):

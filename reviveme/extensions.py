@@ -3,7 +3,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 
 class BaseModel(DeclarativeBase):
-    pass
-
+    def serialize(self):
+        raise NotImplementedError
 
 db = SQLAlchemy(model_class=BaseModel)

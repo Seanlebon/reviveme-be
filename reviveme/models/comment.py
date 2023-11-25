@@ -19,3 +19,11 @@ class Comment(db.Model):
 
     def __repr__(self):
         return f"<Comment id={self.id!r}, author_id={self.author_id!r}, thread_id={self.thread_id!r} content={self.content!r}>"
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "author_id": self.author_id,
+            "thread_id": self.thread_id,
+            "content": self.content,
+        }
