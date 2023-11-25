@@ -1,7 +1,7 @@
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from reviveme.extensions import db
+from reviveme.db import db
 
 
 class User(db.Model):

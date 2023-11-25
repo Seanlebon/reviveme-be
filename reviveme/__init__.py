@@ -1,6 +1,7 @@
 from flask import Flask
+from flask_migrate import Migrate
 
-from reviveme.extensions import db
+from reviveme.db import db
 
 
 def create_app():
@@ -8,6 +9,7 @@ def create_app():
     app.config.from_pyfile("../config.py")
 
     db.init_app(app)
+    migrate = Migrate(app, db)
 
     # Register blueprints
     from reviveme.api.v1 import bp as v1_bp

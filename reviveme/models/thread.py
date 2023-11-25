@@ -3,8 +3,8 @@ from typing import List
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from reviveme.extensions import db
 from reviveme.models import Comment
+from reviveme.db import db
 
 class Thread(db.Model):
     __tablename__ = "threads"
