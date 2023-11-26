@@ -53,10 +53,20 @@ def create_fake_thread_data(app: Flask):
                 "title": "Johns Thread",
                 "content": "Lorem Ipsum...",
             },
+            {
+                "author_id": User.query.filter_by(username="john_doe").first().id,
+                "title": "Johns Thread 2",
+                "content": "Lorem Ipsum...",
+            },
+            {
+                "author_id": User.query.filter_by(username="jane_doe").first().id,
+                "title": "Janes Thread",
+                "content": "Lorem Ipsum...",
+            },
         )
         try:
             for thread_data in FAKE_THREAD_DATA:
-                if Thread.query.filter_by(author_id=thread_data["author_id"]).first():
+                if Thread.query.filter_by(title=thread_data["title"]).first():
                     continue
                 db.session.add(Thread(**thread_data))
             db.session.commit()

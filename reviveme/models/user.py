@@ -14,11 +14,11 @@ class User(db.Model):
         String(22)
     )  # 22 characters is the exact length of a bcrypt salt
 
-    def __init__(self, username: str, email: str, password: str):
+    def __init__(self, username: str, email: str, password: str, salt: str):
         self.username = username
         self.email = email
         self.password = password
-        self.salt = "123"
+        self.salt = salt
 
     def __repr__(self):
         return (
