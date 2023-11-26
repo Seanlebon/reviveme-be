@@ -1,9 +1,5 @@
-from typing import Any
-
-from flask import Response, request
-
 from reviveme import db
-from reviveme.models import Thread
+from reviveme.models import User
 
 from . import bp
 
@@ -12,4 +8,4 @@ from . import bp
 def users_list():
     # TODO: figure out how to serialize our models properly
     users = db.session.execute(db.select(User)).scalars().all()
-    return [{"username": user.username, "email": user.email} for user in users]
+    return [user.serialize() for user in users]
