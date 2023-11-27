@@ -1,3 +1,3 @@
-from reviveme.models.comment import Comment
-from reviveme.models.thread import Thread
-from reviveme.models.user import User
+from .comment import Comment
+from .thread import Thread
+from .user import User

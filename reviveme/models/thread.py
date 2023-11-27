@@ -3,8 +3,8 @@ from typing import List
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from reviveme.models import Comment
 from reviveme.db import db
+
 
 class Thread(db.Model):
     __tablename__ = "threads"
@@ -14,12 +14,13 @@ class Thread(db.Model):
     content: Mapped[str] = mapped_column(String(10000))
 
     comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="thread")
+    author: Mapped["User"] = relationship("User", back_populates="threads")
 
     def __init__(self, author_id: int, title: str, content: str):
         self.author_id = author_id
         self.title = title
         self.content = content
-    
+
     def __repr__(self):
         return f"<Thread id={self.id!r}, title={self.title!r}, author_id={self.author_id!r}>"
 
@@ -29,4 +30,5 @@ class Thread(db.Model):
             "author_id": self.author_id,
             "title": self.title,
             "content": self.content,
+            "author_name": self.author.username,
         }
