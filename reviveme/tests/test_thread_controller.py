@@ -70,7 +70,7 @@ class TestThreadController():
         assert response.json == [thread.serialize() for thread in threads]
 
     def test_get_thread(self, client, thread):
-        response = client.get('/api/v1/threads/1')
+        response = client.get(f'/api/v1/threads/{thread.id}')
         assert response.status_code == 200
         assert response.json == thread.serialize()
 
