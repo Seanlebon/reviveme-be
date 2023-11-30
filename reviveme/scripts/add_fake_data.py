@@ -107,10 +107,12 @@ def create_fake_database_data():
     tables_in_db = db.metadata.tables.keys()
 
     with app.app_context():
+        db.drop_all()
         for table in tables_in_db:
             all_tables_exist = True if table in models else False
         if not all_tables_exist:
             db.create_all()
+            print("creating tables")
 
         # Order matters here, comments require a thread, threads require an author(User)
         create_fake_user_data(app)
