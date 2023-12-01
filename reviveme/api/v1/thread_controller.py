@@ -23,7 +23,9 @@ def thread_detail(id):
 
 @bp.route("/threads", methods=["POST"])
 def thread_create():
-    data: Any = request.json  # the :Any silences pylance errors
+    data = request.json.get("data", None)
+    if not data:
+        return Response(status=404)
     # TODO validate incoming data
     # TODO: get author_id from token once auth is implemented
     thread = Thread(title=data["title"], content=data["content"], author_id=1)
