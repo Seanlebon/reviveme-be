@@ -10,6 +10,7 @@ from . import bp
 
 @bp.route("/threads/<int:thread_id>/comments", methods=["GET"])
 def comment_list(thread_id):
+    db.get_or_404(Thread, thread_id) # 404 if thread doesn't exist
     comments = (
         db.session.execute(db.select(Comment).where(Comment.thread_id == thread_id))
         .scalars()
