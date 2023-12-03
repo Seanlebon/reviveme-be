@@ -1,6 +1,5 @@
 import pytest
 
-
 from . import client, app, app_context
 from reviveme.db import db
 from reviveme.models import Thread, User, Comment
@@ -64,7 +63,6 @@ class TestThreadController():
         return comment
 
     def test_get_threads(self, client, threads):
-        # TODO: make fake data for this test
         response = client.get('/api/v1/threads')
         assert response.status_code == 200
         assert response.json == [thread.serialize() for thread in threads]
