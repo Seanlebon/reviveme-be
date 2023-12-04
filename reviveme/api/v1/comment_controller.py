@@ -52,6 +52,6 @@ def comment_update(comment_id):
 @bp.route("/comments/<int:comment_id>", methods=["DELETE"])
 def comment_delete(comment_id):
     comment = db.get_or_404(Comment, comment_id)
-    db.session.delete(comment)
+    comment.deleted = True
     db.session.commit()
     return Response(status=200)
