@@ -37,10 +37,12 @@ def thread_create():
 @bp.route("/threads/<int:id>", methods=["PUT"])
 def thread_update(id):
     thread = db.get_or_404(Thread, id)
-    data: Any = request.json
+    data = request.json.get("data", None)
+    if not data:
+        return Response(status=404)
     # TODO validate incoming data
-    thread.title = data["title"]
-    thread.content = data["content"]
+    thread.title = data.get("title", thread.title)
+    thread.content = data.get("content", thread.content)
     db.session.commit()
     return Response(status=200)
 
