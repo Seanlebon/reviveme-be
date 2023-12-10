@@ -79,18 +79,41 @@ def create_fake_thread_data(app: Flask):
 
 def create_fake_comment_data(app: Flask):
     with app.app_context():
-        FAKE_COMMENT_DATA = (
-            {
-                "author_id": User.query.filter_by(username="jane_doe").first().id,
-                "thread_id": Thread.query.filter_by(title="Johns Thread").first().id,
-                "content": "This is a comment made by Jane",
-            },
-        )
+        FAKE_COMMENT_DATA = [
+            Comment(
+                author_id = User.query.filter_by(username="jane_doe").first().id,
+                thread_id = Thread.query.filter_by(title="Johns Thread").first().id,
+                content = "This is a comment made by Jane",
+            ),
+            Comment(
+                author_id = User.query.filter_by(username="jane_doe").first().id,
+                thread_id = Thread.query.filter_by(title="Johns Thread").first().id,
+                content = "This is another comment made by Jane",
+            ),
+        ]
+
         try:
-            for comment_data in FAKE_COMMENT_DATA:
-                if Comment.query.filter_by(author_id=comment_data["author_id"]).first():
+            for comment in FAKE_COMMENT_DATA:
+                comment_from_db = Comment.query.filter_by(author_id=comment.author_id, content=comment.content, depth=1).first()
+                if comment_from_db:
+                    FAKE_COMMENT_DATA[0] = comment_from_db
                     continue
-                db.session.add(Comment(**comment_data))
+                db.session.add(comment)
+            db.session.commit()
+
+            FAKE_REPLY_DATA = (
+                Comment(
+                    author_id = User.query.filter_by(username="john_doe").first().id,
+                    thread_id = FAKE_COMMENT_DATA[0].thread_id,
+                    content = "This is a reply made by John",
+                    parent_id = FAKE_COMMENT_DATA[0].id,
+                ),
+            )
+
+            for reply in FAKE_REPLY_DATA:
+                if Comment.query.filter_by(author_id=reply.author_id, depth=2).first():
+                    continue
+                db.session.add(reply)
             db.session.commit()
             logger.info("Fake Comment data was added to the db")
         except Exception as e:
