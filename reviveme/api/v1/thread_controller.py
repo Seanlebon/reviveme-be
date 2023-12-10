@@ -50,6 +50,6 @@ def thread_update(id):
 @bp.route("/threads/<int:id>", methods=["DELETE"])
 def thread_delete(id):
     thread = db.get_or_404(Thread, id)
-    db.session.delete(thread)
+    thread.deleted = True
     db.session.commit()
     return Response(status=200)
