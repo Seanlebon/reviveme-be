@@ -170,8 +170,13 @@ class TestCommentController:
         response = client.delete(f'/api/v1/comments/{comment.id}')
         assert response.status_code == 200
 
-        comment = db.session.query(Comment).filter_by(id=comment.id).first()
-        assert comment is None
+        assert comment.deleted == True
+
+        resp = client.get(f'/api/v1/comments/{comment.id}')
+        assert resp.status_code == 200
+        assert resp.json["deleted"] == True
+        assert resp.json["content"] == None
+        assert resp.json["author_id"] == None
     
     def test_delete_comment_404(self, client):
         response = client.delete('/api/v1/comments/1')
