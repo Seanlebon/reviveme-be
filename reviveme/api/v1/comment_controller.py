@@ -54,6 +54,7 @@ def comment_list(thread_id):
             new_nodes[comment.id] = node
         
         prev_level_comments = new_nodes
+        depth += 1
 
     return [comment.serialize() for comment in top_level_comments]
 
@@ -72,7 +73,7 @@ def comment_create(thread_id):
 
     # TODO validate data in request body
     # TODO: get author_id from token once auth is implemented
-    if data["parent_id"]:
+    if "parent_id" in data:
         db.get_or_404(Comment, data["parent_id"])
         comment = Comment(
             content=data["content"],
