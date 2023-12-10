@@ -87,6 +87,16 @@ class TestThreadController():
         response = client.delete(f'/api/v1/threads/{thread.id}')
         assert response.status_code == 200
 
+        assert thread.deleted == True
+        
+        response = client.get(f'/api/v1/threads/{thread.id}')
+        assert response.status_code == 200
+        assert response.json["deleted"] == True
+        assert response.json["author_id"] == None
+        assert response.json["author_name"] == None
+        assert response.json["title"] == None
+        assert response.json["content"] == None
+
     def test_delete_thread_404(self, client):
         response = client.delete('/api/v1/threads/1')
         assert response.status_code == 404
