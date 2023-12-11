@@ -25,7 +25,7 @@ def thread_detail(id):
 def thread_create():
     data = request.json.get("data", None)
     if not data:
-        return Response(status=404)
+        return Response(status=400)
     # TODO validate incoming data
     # TODO: get author_id from token once auth is implemented
     thread = Thread(title=data["title"], content=data["content"], author_id=1)
@@ -39,7 +39,7 @@ def thread_update(id):
     thread = db.get_or_404(Thread, id)
     data = request.json.get("data", None)
     if not data:
-        return Response(status=404)
+        return Response(status=400)
     # TODO validate incoming data
     thread.title = data.get("title", thread.title)
     thread.content = data.get("content", thread.content)
