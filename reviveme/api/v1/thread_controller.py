@@ -23,7 +23,9 @@ def thread_detail(id):
 
 @bp.route("/threads", methods=["POST"])
 def thread_create():
-    data: Any = request.json  # the :Any silences pylance errors
+    data = request.json.get("data", None)
+    if not data:
+        return Response(status=400)
     # TODO validate incoming data
     # TODO: get author_id from token once auth is implemented
     thread = Thread(title=data["title"], content=data["content"], author_id=1)
@@ -35,10 +37,12 @@ def thread_create():
 @bp.route("/threads/<int:id>", methods=["PUT"])
 def thread_update(id):
     thread = db.get_or_404(Thread, id)
-    data: Any = request.json
+    data = request.json.get("data", None)
+    if not data:
+        return Response(status=400)
     # TODO validate incoming data
-    thread.title = data["title"]
-    thread.content = data["content"]
+    thread.title = data.get("title", thread.title)
+    thread.content = data.get("content", thread.content)
     db.session.commit()
     return Response(status=200)
 
