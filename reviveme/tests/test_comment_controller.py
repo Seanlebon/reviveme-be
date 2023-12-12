@@ -4,8 +4,7 @@ from . import client, app, app_context
 from reviveme.db import db
 from reviveme.models import Thread, User, Comment
 
-@pytest.mark.usefixtures("client")
-@pytest.mark.usefixtures("app_context")
+@pytest.mark.usefixtures("client", "app_context")
 class TestCommentController:
     @pytest.fixture()
     def user(self) -> User:
@@ -63,14 +62,14 @@ class TestCommentController:
         db.session.commit()
         return comment
     
-    # two comments on one thread
+    # Multiple non-nested comments on one thread
     @pytest.fixture()
     def comments(self, user, thread):
         comments = [
             Comment(
                 author_id=user.id,
                 thread_id=thread.id,
-                content="Test Comment"
+                content="Test Comment 1"
             ),
             Comment(
                 author_id=user.id,
@@ -82,6 +81,61 @@ class TestCommentController:
         db.session.add_all(comments)
         db.session.commit()
         return comments
+
+    # several nested comments on one thread
+    @pytest.fixture()
+    def nested_comments(self, user, thread):
+        top_level_comments = [
+            Comment(
+                author_id=user.id,
+                thread_id=thread.id,
+                content="Test Comment 1"
+            ),
+            Comment(
+                author_id=user.id,
+                thread_id=thread.id,
+                content="Test Comment 2"
+            )
+        ]
+
+        db.session.add_all(top_level_comments)
+        db.session.commit()
+
+        child_comments = [
+            Comment(
+                author_id=user.id,
+                thread_id=thread.id,
+                content="Test Comment 1 Reply 1",
+                parent_id=top_level_comments[0].id
+            ),
+            Comment(
+                author_id=user.id,
+                thread_id=thread.id,
+                content="Test Comment 1 Reply 2",
+                parent_id=top_level_comments[0].id
+            ),
+            Comment(
+                author_id=user.id,
+                thread_id=thread.id,
+                content="Test Comment 2 Reply 1",
+                parent_id=top_level_comments[1].id
+            )
+        ]
+        db.session.add_all(child_comments)
+        db.session.commit()
+
+        grandchild_comments = [
+            Comment(
+                author_id=user.id,
+                thread_id=thread.id,
+                content="Test Comment 1 Reply 1 Grandchild",
+                parent_id=child_comments[0].id
+            )
+        ]
+        db.session.add_all(grandchild_comments)
+
+        db.session.commit()
+        return (top_level_comments, child_comments, grandchild_comments)
     
     @pytest.fixture()
     def comments_on_multiple_threads(self, user, threads):
@@ -110,16 +164,40 @@ class TestCommentController:
     def test_list_comments(self, client, comments):
         response = client.get(f'/api/v1/threads/{comments[0].thread.id}/comments')
         assert response.status_code == 200
-        assert response.json == [ comment.serialize() for comment in comments ]
+        assert response.json == [ {**comment.serialize(), "children": []} for comment in comments ]
 
-    def list_comments_multiple_threads(self, client, comments_on_multiple_threads):
+    def test_list_comments_multiple_threads(self, client, comments_on_multiple_threads):
         response = client.get(f'/api/v1/threads/{comments_on_multiple_threads[0].thread.id}/comments')
         assert response.status_code == 200
-        assert response.json == [ comments_on_multiple_threads[0].serialize() ]
+        assert response.json == [ {**comments_on_multiple_threads[0].serialize(), "children": []} ]
 
         response = client.get(f'/api/v1/threads/{comments_on_multiple_threads[1].thread.id}/comments')
         assert response.status_code == 200
-        assert response.json == [ comment.serialize() for comment in comments_on_multiple_threads[1:] ]
+        assert response.json == [ {**comment.serialize(), "children": []} for comment in comments_on_multiple_threads[1:] ]
+    
+    def test_list_comments_nested(self, client, nested_comments):
+        top_level_comments, child_comments, grandchild_comments = nested_comments
+        response = client.get(f'/api/v1/threads/{top_level_comments[0].thread_id}/comments')
+        assert response.status_code == 200
+
+        expected_response = [
+            {
+                **top_level_comments[0].serialize(),
+                "children": [
+                    {
+                        **child_comments[0].serialize(),
+                        "children": [{ **grandchild_comments[0].serialize(), "children": [] }]
+                    },
+                    { **child_comments[1].serialize(), "children": [] }
+                ]
+            },
+            {
+                **top_level_comments[1].serialize(),
+                "children": [{ **child_comments[2].serialize(), "children": [] }]
+            }
+        ]
+        
+        assert response.json == expected_response
 
     def test_list_comments_404(self, client):
         response = client.get('/api/v1/threads/1/comments')
@@ -143,6 +221,21 @@ class TestCommentController:
         comment = db.session.query(Comment).filter_by(thread_id=thread.id).first()
         assert comment is not None
         assert comment.content == "Test Comment"
+
+    def test_create_comment_nested(self, client, thread, comment):
+        response = client.post(f'/api/v1/threads/{thread.id}/comments', json={
+            "content": "Test Comment",
+            "parent_id": comment.id
+        })
+        assert response.status_code == 201
+
+        comments = db.session.query(Comment).filter_by(thread_id=thread.id)
+        assert comments.count() == 2
+
+        child_comment = comments.filter_by(parent_id=comment.id).first()
+        assert child_comment is not None
+        assert child_comment.content == "Test Comment"
+        assert child_comment.depth == 2
 
     def test_create_comment_404(self, client):
         response = client.post('/api/v1/threads/1/comments', json={
