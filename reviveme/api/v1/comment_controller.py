@@ -6,7 +6,7 @@ from flask import Response, jsonify, request
 from reviveme import db
 from reviveme.models import Comment, Thread
 
-from marshmallow import Schema, fields, post_load, validate, validates
+from marshmallow import Schema, fields, post_load, validate, validates, ValidationError
 
 from . import bp
 
@@ -20,7 +20,7 @@ class CommentSchema(Schema):
     @validates("parent_id")
     def validate_parent_id(self, parent_id):
         if parent_id is not None and db.session.get(Comment, parent_id) is None:
-            raise ValueError(f"Comment with id {parent_id} does not exist")
+            raise ValidationError(f"Comment with id {parent_id} does not exist")
 
     @post_load
     def make_comment(self, data, **kwargs) -> Comment:
