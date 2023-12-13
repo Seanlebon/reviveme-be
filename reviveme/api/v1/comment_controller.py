@@ -92,7 +92,7 @@ def comment_create(thread_id):
     schema = CommentSchema()
     # TODO: get author_id from token once auth is implemented
     schema.author_id, schema.thread_id = 1, thread_id
-    comment = schema.load(data, thread_id=thread_id, author_id=1)
+    comment = schema.load(data)
     db.session.add(comment)
     db.session.commit()
     return Response(status=201)
