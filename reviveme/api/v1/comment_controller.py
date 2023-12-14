@@ -1,12 +1,30 @@
 from __future__ import annotations
 
 from typing import Any, List
-from flask import Response, request
+from flask import Response, jsonify, request
 
 from reviveme import db
 from reviveme.models import Comment, Thread
 
+from marshmallow import Schema, fields, post_load, validate, validates, ValidationError
+
 from . import bp
+
+class CommentSchema(Schema):
+    content = fields.Str(required=True, validate=validate.Length(min=1))
+    parent_id = fields.Int()
+
+    author_id = None # set this before calling load()
+    thread_id = None # set this before calling load()
+
+    @validates("parent_id")
+    def validate_parent_id(self, parent_id):
+        if parent_id is not None and db.session.get(Comment, parent_id) is None:
+            raise ValidationError(f"Comment with id {parent_id} does not exist")
+
+    @post_load
+    def make_comment(self, data, **kwargs) -> Comment:
+        return Comment(**data, author_id=self.author_id, thread_id=self.thread_id)
 
 class CommentNode:
     '''
@@ -71,22 +89,10 @@ def comment_create(thread_id):
     if db.session.get(Thread, thread_id) is None:
         return Response(f"Thread with id {thread_id} not found", status=404)
 
-    # TODO validate data in request body
+    schema = CommentSchema()
     # TODO: get author_id from token once auth is implemented
-    if "parent_id" in data:
-        db.get_or_404(Comment, data["parent_id"])
-        comment = Comment(
-            content=data["content"],
-            thread_id=thread_id,
-            author_id=1,
-            parent_id=data["parent_id"],
-        )
-    else:
-        comment = Comment(
-            content=data["content"], 
-            thread_id=thread_id, 
-            author_id=1
-        )
+    schema.author_id, schema.thread_id = 1, thread_id
+    comment = schema.load(data)
     db.session.add(comment)
     db.session.commit()
     return Response(status=201)
@@ -96,7 +102,11 @@ def comment_create(thread_id):
 def comment_update(comment_id):
     comment = db.get_or_404(Comment, comment_id)
     data: Any = request.json
-    # TODO validate incoming data
+
+    errors = CommentSchema().validate(data, partial=("content",))
+    if errors:
+        return jsonify(errors), 400
+
     comment.content = data["content"]
     db.session.commit()
     return Response(status=200)

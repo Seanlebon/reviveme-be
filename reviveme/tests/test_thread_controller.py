@@ -55,6 +55,65 @@ class TestThreadController():
             "content": "Test Content",
         })
         assert response.status_code == 201
+    
+    def test_create_thread_400(self, client, user):
+        invalid_inputs = [
+            {"title": "Test Thread"},
+            {"content": "Test Content"},
+            {"title": "Test Thread", "content": "Test Content", "invalid": "invalid"},
+            {"title": "", "content": "Test Content"},
+        ]
+
+        for inp in invalid_inputs:
+            response = client.post('/api/v1/threads', json=inp)
+            assert response.status_code == 400
+
+    def test_update_thread(self, client, thread):
+        response = client.put(f'/api/v1/threads/{thread.id}', json={
+            "title": "Updated Title",
+            "content": "Updated Content",
+        })
+        assert response.status_code == 200
+
+        thread = db.session.get(Thread, thread.id)
+        assert thread.title == "Updated Title"
+        assert thread.content == "Updated Content"
+    
+    def test_update_thread_title(self, client, thread):
+        response = client.put(f'/api/v1/threads/{thread.id}', json={
+            "title": "Updated Title",
+        })
+        assert response.status_code == 200
+
+        thread = db.session.get(Thread, thread.id)
+        assert thread.title == "Updated Title"
+        assert thread.content == "Test Content"
+    
+    def test_update_thread_content(self, client, thread):
+        response = client.put(f'/api/v1/threads/{thread.id}', json={
+            "content": "Updated Content",
+        })
+        assert response.status_code == 200
+
+        thread = db.session.get(Thread, thread.id)
+        assert thread.title == "Test Thread"
+        assert thread.content == "Updated Content"
+
+    def test_update_thread_404(self, client):
+        response = client.put('/api/v1/threads/1', json={
+            "title": "Updated Title",
+            "content": "Updated Content",
+        })
+        assert response.status_code == 404
+    
+    def test_update_thread_400(self, client, thread):
+        invalid_inputs = [
+            {"title": ""},
+        ]
+        for inp in invalid_inputs:
+            response = client.put(f'/api/v1/threads/{thread.id}', json=inp)
+            assert response.status_code == 400
+            assert thread.title != inp["title"]
 
     def test_delete_thread(self, client, thread):
         response = client.delete(f'/api/v1/threads/{thread.id}')

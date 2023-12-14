@@ -228,6 +228,19 @@ class TestCommentController:
         })
         assert response.status_code == 404
 
+    def test_create_comment_invalid_parent(self, client, thread):
+        response = client.post(f'/api/v1/threads/{thread.id}/comments', json={
+            "content": "Test Comment",
+            "parent_id": 1
+        })
+        assert response.status_code == 400
+
+    def test_create_comment_invalid_content(self, client, thread):
+        response = client.post(f'/api/v1/threads/{thread.id}/comments', json={
+            "content": ""
+        })
+        assert response.status_code == 400
+
     def test_update_comment(self, client, comment):
         response = client.put(f'/api/v1/comments/{comment.id}', json={
             "content": "Updated Comment"
@@ -243,6 +256,12 @@ class TestCommentController:
             "content": "Updated Comment"
         })
         assert response.status_code == 404
+
+    def test_update_comment_invalid_content(self, client, comment):
+        response = client.put(f'/api/v1/comments/{comment.id}', json={
+            "content": ""
+        })
+        assert response.status_code == 400
 
     def test_delete_comment(self, client, comment):
         response = client.delete(f'/api/v1/comments/{comment.id}')
