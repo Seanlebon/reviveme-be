@@ -1,7 +1,7 @@
 import pytest
 
 from reviveme.db import db
-from reviveme.models import Thread, User, Comment
+from reviveme.models import Thread
 
 class TestThreadController():
     @pytest.fixture()
@@ -34,17 +34,6 @@ class TestThreadController():
         db.session.add_all(threads)
         db.session.commit()
         return threads
-    
-    @pytest.fixture()
-    def comment(self, user, thread):
-        comment = Comment(
-            author_id=user.id,
-            thread_id=thread.id,
-            content="Test Comment"
-        )
-        db.session.add(comment)
-        db.session.commit()
-        return comment
 
     def test_get_threads(self, client, threads):
         response = client.get('/api/v1/threads')
