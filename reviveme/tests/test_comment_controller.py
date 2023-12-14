@@ -1,24 +1,9 @@
 import pytest
 
-from . import client, app, app_context
 from reviveme.db import db
-from reviveme.models import Thread, User, Comment
+from reviveme.models import Thread, Comment
 
-@pytest.mark.usefixtures("client", "app_context")
 class TestCommentController:
-    @pytest.fixture()
-    def user(self) -> User:
-        user = User(
-            username="johndoe",
-            email="john.doe@test.com",
-            password="password",
-            salt="salt"
-        )
-
-        db.session.add(user)
-        db.session.commit()
-        return user
-
     @pytest.fixture()
     def thread(self, user) -> Thread:
         thread = Thread(
