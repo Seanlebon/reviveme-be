@@ -199,7 +199,8 @@ class TestCommentController:
 
     def test_create_comment(self, client, thread):
         response = client.post(f'/api/v1/threads/{thread.id}/comments', json={
-            "content": "Test Comment"
+            "content": "Test Comment",
+            "author_id": 1
         })
         assert response.status_code == 201
 
@@ -210,7 +211,8 @@ class TestCommentController:
     def test_create_comment_nested(self, client, thread, comment):
         response = client.post(f'/api/v1/threads/{thread.id}/comments', json={
             "content": "Test Comment",
-            "parent_id": comment.id
+            "parent_id": comment.id,
+            "author_id": 1
         })
         assert response.status_code == 201
 
@@ -243,7 +245,8 @@ class TestCommentController:
 
     def test_update_comment(self, client, comment):
         response = client.put(f'/api/v1/comments/{comment.id}', json={
-            "content": "Updated Comment"
+            "content": "Updated Comment",
+            "author_id": 1
         })
         assert response.status_code == 200
 
