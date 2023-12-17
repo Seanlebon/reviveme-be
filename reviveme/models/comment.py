@@ -17,6 +17,7 @@ class Comment(db.Model):
     deleted: Mapped[bool] = mapped_column(Boolean, default=False)
 
     thread: Mapped["Thread"] = relationship("Thread", back_populates="comments")
+    author: Mapped["User"] = relationship("User")
 
     def __init__(self, author_id: int, thread_id: int, content: str, parent_id: Union[int, None] = None):
         self.author_id = author_id
@@ -39,6 +40,7 @@ class Comment(db.Model):
         return {
             "id": self.id,
             "author_id": self.author_id if not self.deleted else None,
+            "author_username": self.author.username if not self.deleted else None,
             "thread_id": self.thread_id,
             "content": self.content if not self.deleted else None,
             "deleted": self.deleted,
