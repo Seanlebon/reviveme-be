@@ -9,16 +9,15 @@ from . import bp
 class ThreadSchema(Schema):
     title = fields.Str(required=True, validate=validate.Length(min=1, max=255))
     content = fields.Str(required=True)
-    
-    author_id = None # set this before calling load()
+    author_id = fields.Int(required=True) # TODO: get author_id from token once auth is implemented
 
     @post_load
     def make_thread(self, data, **kwargs) -> Thread:
-        return Thread(**data, author_id=self.author_id)
+        return Thread(**data)
 
 @bp.route("/threads", methods=["GET"])
 def thread_list():
-    threads = db.session.execute(db.select(Thread)).scalars().all()
+    threads = db.session.execute(db.select(Thread).where(Thread.deleted == False)).scalars().all()
     return [thread.serialize() for thread in threads]
 
 
@@ -31,7 +30,6 @@ def thread_detail(id):
 @bp.route("/threads", methods=["POST"])
 def thread_create():
     schema = ThreadSchema()
-    schema.author_id = 1 # TODO: get author_id from token once auth is implemented
     thread = schema.load(request.get_json())
     db.session.add(thread)
     db.session.commit()
@@ -41,6 +39,9 @@ def thread_create():
 @bp.route("/threads/<int:id>", methods=["PUT"])
 def thread_update(id):
     thread = db.get_or_404(Thread, id)
+    if thread.deleted:
+        return Response(status=400, response=f"Thread with id {id} has been deleted")
+
     data = request.get_json()
 
     errors = ThreadSchema().validate(data, partial=True)

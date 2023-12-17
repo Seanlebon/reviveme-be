@@ -13,8 +13,8 @@ from . import bp
 class CommentSchema(Schema):
     content = fields.Str(required=True, validate=validate.Length(min=1))
     parent_id = fields.Int()
-
-    author_id = None # set this before calling load()
+    author_id = fields.Int(required=True) # TODO: get author_id from token once auth is implemented
+    
     thread_id = None # set this before calling load()
 
     @validates("parent_id")
@@ -24,7 +24,7 @@ class CommentSchema(Schema):
 
     @post_load
     def make_comment(self, data, **kwargs) -> Comment:
-        return Comment(**data, author_id=self.author_id, thread_id=self.thread_id)
+        return Comment(**data, thread_id=self.thread_id)
 
 class CommentNode:
     '''
@@ -91,7 +91,7 @@ def comment_create(thread_id):
 
     schema = CommentSchema()
     # TODO: get author_id from token once auth is implemented
-    schema.author_id, schema.thread_id = 1, thread_id
+    schema.thread_id = thread_id
     comment = schema.load(data)
     db.session.add(comment)
     db.session.commit()
@@ -101,6 +101,9 @@ def comment_create(thread_id):
 @bp.route("/comments/<int:comment_id>", methods=["PUT"])
 def comment_update(comment_id):
     comment = db.get_or_404(Comment, comment_id)
+    if comment.deleted:
+        return Response(status=400, response=f"Comment with id {comment_id} has been deleted")
+
     data: Any = request.json
 
     errors = CommentSchema().validate(data, partial=("content",))
