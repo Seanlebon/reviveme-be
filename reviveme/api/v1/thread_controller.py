@@ -17,7 +17,7 @@ class ThreadSchema(Schema):
 
 @bp.route("/threads", methods=["GET"])
 def thread_list():
-    threads = db.session.execute(db.select(Thread)).scalars().all()
+    threads = db.session.execute(db.select(Thread).where(Thread.deleted == False)).scalars().all()
     return [thread.serialize() for thread in threads]
 
 
@@ -39,6 +39,9 @@ def thread_create():
 @bp.route("/threads/<int:id>", methods=["PUT"])
 def thread_update(id):
     thread = db.get_or_404(Thread, id)
+    if thread.deleted:
+        return Response(status=400, response=f"Thread with id {id} has been deleted")
+
     data = request.get_json()
 
     errors = ThreadSchema().validate(data, partial=True)

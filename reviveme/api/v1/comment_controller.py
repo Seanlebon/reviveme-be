@@ -101,6 +101,9 @@ def comment_create(thread_id):
 @bp.route("/comments/<int:comment_id>", methods=["PUT"])
 def comment_update(comment_id):
     comment = db.get_or_404(Comment, comment_id)
+    if comment.deleted:
+        return Response(status=400, response=f"Comment with id {comment_id} has been deleted")
+
     data: Any = request.json
 
     errors = CommentSchema().validate(data, partial=("content",))
