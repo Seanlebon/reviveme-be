@@ -53,6 +53,7 @@ class TestThreadController():
         response = client.post('/api/v1/threads', json={
             "title": "Test Thread",
             "content": "Test Content",
+            "author_id": user.id
         })
         assert response.status_code == 201
     
