@@ -18,7 +18,7 @@ class ThreadSchema(Schema):
 
 @bp.route("/threads", methods=["GET"])
 def thread_list():
-    threads = db.session.execute(db.select(Thread)).scalars().all()
+    threads = db.session.execute(db.select(Thread).where(Thread.deleted == False)).scalars().all()
     return [thread.serialize() for thread in threads]
 
 
