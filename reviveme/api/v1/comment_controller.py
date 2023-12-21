@@ -4,9 +4,11 @@ from typing import Any, List
 from flask import Response, jsonify, request
 
 from reviveme import db
-from reviveme.models import Comment, Thread
+from reviveme.models import Comment, Thread, CommentVote
+from reviveme.api.v1.thread_controller import UpVoteSchema, DownVoteSchema
 
 from marshmallow import Schema, fields, post_load, validate, validates, ValidationError
+from sqlalchemy import select, func
 
 from . import bp
 
@@ -40,9 +42,18 @@ class CommentNode:
     def serialize(self):
         return {
             **self.comment.serialize(),
+            "score": get_comment_score(self.comment.id),
             "children": [child.serialize() for child in self.children]
         }
 
+def get_comment_score(comment_id):
+    upvotes = db.session.execute(
+        select(func.count("*")).select_from(CommentVote).where(CommentVote.comment_id == comment_id, CommentVote.upvote == True)
+    ).scalar()
+    downvotes = db.session.execute(
+        select(func.count("*")).select_from(CommentVote).where(CommentVote.comment_id == comment_id, CommentVote.upvote == False)
+    ).scalar()
+    return upvotes - downvotes
 
 @bp.route("/threads/<int:thread_id>/comments", methods=["GET"])
 def comment_list(thread_id):
@@ -80,7 +91,9 @@ def comment_list(thread_id):
 @bp.route("/comments/<int:comment_id>", methods=["GET"])
 def comment_detail(comment_id):
     comment = db.get_or_404(Comment, comment_id)
-    return comment.serialize()
+    data = comment.serialize()
+    data["score"] = get_comment_score(comment_id)
+    return data
 
 
 @bp.route("/threads/<int:thread_id>/comments", methods=["POST"])
@@ -119,5 +132,53 @@ def comment_update(comment_id):
 def comment_delete(comment_id):
     comment = db.get_or_404(Comment, comment_id)
     comment.deleted = True
+    db.session.commit()
+    return Response(status=200)
+
+@bp.route("/comments/<int:comment_id>/upvote", methods=["POST"])
+def comment_upvote(comment_id):
+    comment = db.get_or_404(Comment, comment_id)
+    if comment.deleted:
+        return Response(status=400, response=f"Comment with id {comment_id} has been deleted")
+    
+    data = UpVoteSchema().load(request.get_json())
+
+    vote = db.session.execute(
+        select(CommentVote).where(CommentVote.comment_id == comment_id, CommentVote.user_id == data['user_id'])
+    ).scalars().first()
+
+    if vote is None:
+        vote = CommentVote(user_id=data['user_id'], comment_id=comment_id, upvote=data['upvote'])
+        db.session.add(vote)
+    elif vote.upvote and not data['upvote']: # if user upvoted and now wants to remove upvote
+        db.session.delete(vote)
+    elif not vote.upvote and data['upvote']: # if user downvoted and now wants to upvote
+        vote.upvote = True
+        db.session.add(vote)
+    
+    db.session.commit()
+    return Response(status=200)
+
+@bp.route("/comments/<int:comment_id>/downvote", methods=["POST"])
+def comment_downvote(comment_id):
+    comment = db.get_or_404(Comment, comment_id)
+    if comment.deleted:
+        return Response(status=400, response=f"Comment with id {comment_id} has been deleted")
+    
+    data = DownVoteSchema().load(request.get_json())
+
+    vote = db.session.execute(
+        select(CommentVote).where(CommentVote.comment_id == comment_id, CommentVote.user_id == data['user_id'])
+    ).scalars().first()
+
+    if vote is None:
+        vote = CommentVote(user_id=data['user_id'], comment_id=comment_id, upvote=not data['downvote'])
+        db.session.add(vote)
+    elif not vote.upvote and not data['downvote']:
+        db.session.delete(vote)
+    elif vote.upvote and data['downvote']:
+        vote.upvote = False
+        db.session.add(vote)
+    
     db.session.commit()
     return Response(status=200)

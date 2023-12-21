@@ -3,8 +3,7 @@ from marshmallow import Schema, fields, post_load, validate
 from sqlalchemy import select, func
 
 from reviveme import db
-from reviveme.models import Thread
-from reviveme.models.thread_vote import ThreadVote
+from reviveme.models import Thread, ThreadVote
 from . import bp
 
 
@@ -17,7 +16,7 @@ class ThreadSchema(Schema):
     def make_thread(self, data, **kwargs) -> Thread:
         return Thread(**data)
 
-class UpVoteSchema(Schema):
+class UpVoteSchema(Schema): # TODO: move these schema into separate files
     upvote = fields.Boolean(required=True)
     user_id = fields.Int(required=True)
     
