@@ -1,8 +1,10 @@
 from flask import Response, request, jsonify
 from marshmallow import Schema, fields, post_load, validate
+from sqlalchemy import select, func
 
 from reviveme import db
 from reviveme.models import Thread
+from reviveme.models.thread_vote import ThreadVote
 from . import bp
 
 
@@ -15,16 +17,35 @@ class ThreadSchema(Schema):
     def make_thread(self, data, **kwargs) -> Thread:
         return Thread(**data)
 
+class UpVoteSchema(Schema):
+    upvote = fields.Boolean(required=True)
+    user_id = fields.Int(required=True)
+    
+class DownVoteSchema(Schema):
+    downvote = fields.Boolean(required=True)
+    user_id = fields.Int(required=True)
+
+def get_thread_score(thread_id):
+    upvotes = db.session.execute(
+        select(func.count("*")).select_from(ThreadVote).where(ThreadVote.thread_id == thread_id, ThreadVote.upvote == True)
+    ).scalar()
+    downvotes = db.session.execute(
+        select(func.count("*")).select_from(ThreadVote).where(ThreadVote.thread_id == thread_id, ThreadVote.upvote == False)
+    ).scalar()
+    return upvotes - downvotes
+
 @bp.route("/threads", methods=["GET"])
 def thread_list():
     threads = db.session.execute(db.select(Thread).where(Thread.deleted == False)).scalars().all()
-    return [thread.serialize() for thread in threads]
+    return [thread.serialize() | {'score': get_thread_score(thread.id)} for thread in threads]
 
 
 @bp.route("/threads/<int:id>", methods=["GET"])
 def thread_detail(id):
     thread = db.get_or_404(Thread, id)
-    return thread.serialize()
+    resp_data = thread.serialize()
+    resp_data['score'] = get_thread_score(id)
+    return resp_data
 
 
 @bp.route("/threads", methods=["POST"])
@@ -58,5 +79,53 @@ def thread_update(id):
 def thread_delete(id):
     thread = db.get_or_404(Thread, id)
     thread.deleted = True
+    db.session.commit()
+    return Response(status=200)
+
+@bp.route("/threads/<int:id>/upvote", methods=["POST"])
+def thread_upvote(id):
+    thread = db.get_or_404(Thread, id)
+    if thread.deleted:
+        return Response(status=400, response=f"Thread with id {id} has been deleted")
+    
+    data = UpVoteSchema().load(request.get_json())
+
+    vote = db.session.execute(
+        select(ThreadVote).where(ThreadVote.thread_id == id, ThreadVote.user_id == data['user_id'])
+    ).scalars().first()
+
+    if vote is None:
+        vote = ThreadVote(user_id=data['user_id'], thread_id=id, upvote=data['upvote'])
+        db.session.add(vote)
+    elif vote.upvote and not data['upvote']: # if user upvoted and now wants to remove upvote
+        db.session.delete(vote)
+    elif not vote.upvote and data['upvote']: # if user downvoted and now wants to upvote
+        vote.upvote = True
+        db.session.add(vote)
+    
+    db.session.commit()
+    return Response(status=200)
+
+@bp.route("/threads/<int:id>/downvote", methods=["POST"])
+def thread_downvote(id):
+    thread = db.get_or_404(Thread, id)
+    if thread.deleted:
+        return Response(status=400, response=f"Thread with id {id} has been deleted")
+    
+    data = DownVoteSchema().load(request.get_json())
+
+    vote = db.session.execute(
+        select(ThreadVote).where(ThreadVote.thread_id == id, ThreadVote.user_id == data['user_id'])
+    ).scalars().first()
+
+    if vote is None:
+        vote = ThreadVote(user_id=data['user_id'], thread_id=id, upvote=not data['downvote'])
+        db.session.add(vote)
+    elif not vote.upvote and not data['downvote']:
+        db.session.delete(vote)
+    elif vote.upvote and data['downvote']:
+        vote.upvote = False
+        db.session.add(vote)
+    
     db.session.commit()
     return Response(status=200)
