@@ -15,16 +15,6 @@ class DownVoteSchema(Schema):
     downvote = fields.Boolean(required=True)
     user_id = fields.Int(required=True)
 
-def handle_upvote(VoteClass, item_id, vote, data):
-    if vote is None:
-        vote = ThreadVote(user_id=data['user_id'], thread_id=thread_id, upvote=data['upvote'])
-        db.session.add(vote)
-    elif vote.upvote and not data['upvote']: # if user upvoted and now wants to remove upvote
-        db.session.delete(vote)
-    elif not vote.upvote and data['upvote']: # if user downvoted and now wants to upvote
-        vote.upvote = True
-        db.session.add(vote)
-
 @bp.route("/threads/<int:thread_id>/upvote", methods=["POST"])
 def thread_upvote(thread_id):
     thread = db.get_or_404(Thread, thread_id)
