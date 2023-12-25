@@ -53,7 +53,6 @@ def handle_downvote(VoteClass, item_id):
 
 @bp.route("/threads/<int:thread_id>/upvote", methods=["POST"])
 def thread_upvote(thread_id):
-    print('reached')
     thread = db.get_or_404(Thread, thread_id)
     if thread.deleted:
         return Response(status=400, response=f"Thread with id {thread_id} has been deleted")
@@ -65,7 +64,6 @@ def thread_upvote(thread_id):
 
 @bp.route("/threads/<int:thread_id>/downvote", methods=["POST"])
 def thread_downvote(thread_id):
-    print('reached')
     thread = db.get_or_404(Thread, thread_id)
     if thread.deleted:
         return Response(status=400, response=f"Thread with id {thread_id} has been deleted")
