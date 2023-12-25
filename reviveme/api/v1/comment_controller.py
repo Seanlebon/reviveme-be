@@ -39,9 +39,12 @@ class CommentNode:
         self.children.append(node)
 
     def serialize(self):
+        upvoted, downvoted = get_comment_upvoted(self.comment.id, user_id=1) # TODO: get actual user id value
         return {
             **self.comment.serialize(),
             "score": get_comment_score(self.comment.id),
+            "upvoted": upvoted,
+            "downvoted": downvoted,
             "children": [child.serialize() for child in self.children]
         }
 
@@ -53,6 +56,15 @@ def get_comment_score(comment_id):
         select(func.count("*")).select_from(CommentVote).where(CommentVote.comment_id == comment_id, CommentVote.upvote == False)
     ).scalar()
     return upvotes - downvotes
+
+def get_comment_upvoted(comment_id, user_id):
+    upvote_db_val: bool = db.session.execute(
+        select(CommentVote.upvote).where(CommentVote.comment_id == comment_id, CommentVote.user_id == user_id)
+    ).scalar()
+
+    if upvote_db_val is None:
+        return False, False
+    return upvote_db_val, not upvote_db_val
 
 @bp.route("/threads/<int:thread_id>/comments", methods=["GET"])
 def comment_list(thread_id):
@@ -92,6 +104,7 @@ def comment_detail(comment_id):
     comment = db.get_or_404(Comment, comment_id)
     data = comment.serialize()
     data["score"] = get_comment_score(comment_id)
+    data["upvoted"], data["downvoted"] = get_comment_upvoted(comment_id, user_id=1) # TODO: get actual user id value
     return data
 
 

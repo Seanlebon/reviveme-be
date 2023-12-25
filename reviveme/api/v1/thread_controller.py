@@ -26,10 +26,29 @@ def get_thread_score(thread_id):
     ).scalar()
     return upvotes - downvotes
 
+def get_thread_upvoted(thread_id, user_id):
+    upvote_db_val: bool = db.session.execute(
+        select(ThreadVote.upvote).where(ThreadVote.thread_id == thread_id, ThreadVote.user_id == user_id)
+    ).scalar()
+
+    if upvote_db_val is None:
+        return False, False
+    return upvote_db_val, not upvote_db_val
+
 @bp.route("/threads", methods=["GET"])
 def thread_list():
     threads = db.session.execute(db.select(Thread).where(Thread.deleted == False)).scalars().all()
-    return [thread.serialize() | {'score': get_thread_score(thread.id)} for thread in threads]
+    thread_dicts = [thread.serialize() for thread in threads]
+
+    # append vote and score data to results
+    for thread_dict in thread_dicts:
+        # TODO: get actual user id
+        upvoted, downvoted = get_thread_upvoted(thread_id=thread_dict['id'], user_id=1)
+        thread_dict['upvoted'] = upvoted
+        thread_dict['downvoted'] = downvoted
+        thread_dict['score'] = get_thread_score(thread_id=thread_dict['id'])
+    
+    return thread_dicts
 
 
 @bp.route("/threads/<int:id>", methods=["GET"])
@@ -37,6 +56,8 @@ def thread_detail(id):
     thread = db.get_or_404(Thread, id)
     resp_data = thread.serialize()
     resp_data['score'] = get_thread_score(id)
+    # TODO: get actual user id
+    resp_data['upvoted'], resp_data['downvoted'] = get_thread_upvoted(thread_id=id, user_id=1)
     return resp_data
 
 
