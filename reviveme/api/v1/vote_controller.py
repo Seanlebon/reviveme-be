@@ -29,7 +29,6 @@ def handle_upvote(VoteClass, item_id):
         db.session.delete(vote)
     elif not vote.upvote and data['upvote']: # if user downvoted and now wants to upvote
         vote.upvote = True
-        db.session.add(vote)
     
     db.session.commit()
 
@@ -47,7 +46,6 @@ def handle_downvote(VoteClass, item_id):
         db.session.delete(vote)
     elif vote.upvote and data['downvote']:  #if user upvoted and now wants to downvote
         vote.upvote = False
-        db.session.add(vote)
     
     db.session.commit()
 
