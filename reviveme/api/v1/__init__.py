@@ -7,4 +7,4 @@ bp = Blueprint("v1", __name__)
 def handle_validation_error(error):
     return jsonify(error.messages), 400
 
-from . import comment_controller, routes, thread_controller, user_controller
+from . import comment_controller, routes, thread_controller, user_controller, vote_controller
