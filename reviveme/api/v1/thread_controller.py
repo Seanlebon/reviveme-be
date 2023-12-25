@@ -16,13 +16,6 @@ class ThreadSchema(Schema):
     def make_thread(self, data, **kwargs) -> Thread:
         return Thread(**data)
 
-class UpVoteSchema(Schema): # TODO: move these schema into separate files
-    upvote = fields.Boolean(required=True)
-    user_id = fields.Int(required=True)
-    
-class DownVoteSchema(Schema):
-    downvote = fields.Boolean(required=True)
-    user_id = fields.Int(required=True)
 
 def get_thread_score(thread_id):
     upvotes = db.session.execute(

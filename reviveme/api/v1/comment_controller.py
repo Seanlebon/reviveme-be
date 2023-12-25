@@ -5,7 +5,6 @@ from flask import Response, jsonify, request
 
 from reviveme import db
 from reviveme.models import Comment, Thread, CommentVote
-from reviveme.api.v1.thread_controller import UpVoteSchema, DownVoteSchema
 
 from marshmallow import Schema, fields, post_load, validate, validates, ValidationError
 from sqlalchemy import select, func
