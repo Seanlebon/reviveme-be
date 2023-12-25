@@ -38,13 +38,13 @@ class TestThreadController():
     def test_get_threads(self, client, threads):
         response = client.get('/api/v1/threads')
         assert response.status_code == 200
-        assert response.json == [thread.serialize() for thread in threads]
+        assert response.json == [{**thread.serialize(), "score": 0} for thread in threads]
 
     def test_get_thread(self, client, thread):
         response = client.get(f'/api/v1/threads/{thread.id}')
         assert response.status_code == 200
-        assert response.json == thread.serialize()
-
+        assert response.json == {**thread.serialize(), "score": 0}
+        
     def test_get_thread_404(self, client):
         response = client.get('/api/v1/threads/1')
         assert response.status_code == 404

@@ -149,16 +149,16 @@ class TestCommentController:
     def test_list_comments(self, client, comments):
         response = client.get(f'/api/v1/threads/{comments[0].thread.id}/comments')
         assert response.status_code == 200
-        assert response.json == [ {**comment.serialize(), "children": []} for comment in comments ]
+        assert response.json == [ {**comment.serialize(), "children": [], "score": 0} for comment in comments ]
 
     def test_list_comments_multiple_threads(self, client, comments_on_multiple_threads):
         response = client.get(f'/api/v1/threads/{comments_on_multiple_threads[0].thread.id}/comments')
         assert response.status_code == 200
-        assert response.json == [ {**comments_on_multiple_threads[0].serialize(), "children": []} ]
+        assert response.json == [ {**comments_on_multiple_threads[0].serialize(), "children": [], "score": 0} ]
 
         response = client.get(f'/api/v1/threads/{comments_on_multiple_threads[1].thread.id}/comments')
         assert response.status_code == 200
-        assert response.json == [ {**comment.serialize(), "children": []} for comment in comments_on_multiple_threads[1:] ]
+        assert response.json == [ {**comment.serialize(), "children": [], "score": 0} for comment in comments_on_multiple_threads[1:] ]
     
     def test_list_comments_nested(self, client, nested_comments):
         top_level_comments, child_comments, grandchild_comments = nested_comments
@@ -171,14 +171,33 @@ class TestCommentController:
                 "children": [
                     {
                         **child_comments[0].serialize(),
-                        "children": [{ **grandchild_comments[0].serialize(), "children": [] }]
+                        "children": [
+                            {
+                                **grandchild_comments[0].serialize(),
+                                "children": [],
+                                "score": 0
+                            }
+                        ],
+                        "score": 0
                     },
-                    { **child_comments[1].serialize(), "children": [] }
-                ]
+                    {
+                        **child_comments[1].serialize(),
+                        "children": [],
+                        "score": 0
+                    }
+                ],
+                "score": 0
             },
             {
                 **top_level_comments[1].serialize(),
-                "children": [{ **child_comments[2].serialize(), "children": [] }]
+                "children": [
+                    { 
+                        **child_comments[2].serialize(), 
+                        "children": [], 
+                        "score": 0
+                    }
+                ],
+                "score": 0
             }
         ]
         
@@ -191,7 +210,7 @@ class TestCommentController:
     def test_get_comment(self, client, comment):
         response = client.get(f'/api/v1/comments/{comment.id}')
         assert response.status_code == 200
-        assert response.json == comment.serialize()
+        assert response.json == {**comment.serialize(), "score": 0}
 
     def test_get_comment_404(self, client):
         response = client.get('/api/v1/comments/1')
