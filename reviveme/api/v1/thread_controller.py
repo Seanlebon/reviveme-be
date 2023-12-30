@@ -1,5 +1,5 @@
 from flask import Response, request, jsonify
-from marshmallow import Schema, fields, post_load, pre_dump, post_dump, validate
+from marshmallow import Schema, fields, post_load, post_dump, validate
 from sqlalchemy import select, func
 
 import copy
@@ -9,7 +9,7 @@ from reviveme.models import Thread, ThreadVote
 from . import bp
 
 
-class ThreadSchema(Schema):
+class ThreadRequestSchema(Schema):
     title = fields.Str(required=True, validate=validate.Length(min=1, max=255))
     content = fields.Str(required=True)
     author_id = fields.Int(required=True) # TODO: get author_id from token once auth is implemented
@@ -28,15 +28,6 @@ class ThreadResponseSchema(Schema):
     upvoted = fields.Bool()
     downvoted = fields.Bool()
     score = fields.Int()
-
-    def get_author_username(self, obj: Thread):
-        return obj.author.username if not obj.deleted else None
-
-    def get_title(self, obj: Thread):
-        return obj.title if not obj.deleted else None
-    
-    def get_content(self, obj: Thread):
-        return obj.content if not obj.deleted else None
 
     @post_dump(pass_original=True)
     def append_vote_data(self, data, thread: Thread, **kwargs):
@@ -85,7 +76,7 @@ def thread_detail(id):
 
 @bp.route("/threads", methods=["POST"])
 def thread_create():
-    schema = ThreadSchema()
+    schema = ThreadRequestSchema()
     thread = schema.load(request.get_json())
     db.session.add(thread)
     db.session.commit()
@@ -100,7 +91,7 @@ def thread_update(id):
 
     data = request.get_json()
 
-    errors = ThreadSchema().validate(data, partial=True)
+    errors = ThreadRequestSchema().validate(data, partial=True)
     if errors:
         return jsonify(errors), 400
 

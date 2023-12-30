@@ -24,13 +24,3 @@ class Thread(db.Model):
 
     def __repr__(self):
         return f"<Thread id={self.id!r}, title={self.title!r}, author_id={self.author_id!r}>"
-
-    def serialize(self):
-        return {
-            "id": self.id,
-            "author_username": self.author.username if not self.deleted else None,
-            "title": self.title if not self.deleted else None,
-            "content": self.content if not self.deleted else None,
-            "author_name": self.author.username if not self.deleted else None,
-            "deleted": self.deleted,
-        }
