@@ -28,8 +28,7 @@ class Thread(db.Model):
     def serialize(self):
         return {
             "id": self.id,
-            "author_id": self.author_id if not self.deleted else None,
-            'author_username': self.author.username if not self.deleted else None,
+            "author_username": self.author.username if not self.deleted else None,
             "title": self.title if not self.deleted else None,
             "content": self.content if not self.deleted else None,
             "author_name": self.author.username if not self.deleted else None,
