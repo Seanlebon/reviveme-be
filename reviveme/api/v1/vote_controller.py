@@ -3,7 +3,9 @@ from flask import Response, request
 from marshmallow import Schema, fields
 
 from reviveme import db
-from reviveme.models import ThreadVote, CommentVote, Thread, Comment
+from reviveme.models import ThreadVote, CommentVote
+from reviveme.models.thread import Thread
+from reviveme.models.comment import Comment
 
 from sqlalchemy import select
 

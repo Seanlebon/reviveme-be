@@ -1,8 +1,9 @@
-from sqlalchemy import ForeignKey, Text, Integer, Boolean
+from sqlalchemy import ForeignKey, Text, Integer, Boolean, select, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Union
 
 from reviveme.db import db
+from reviveme.models.comment_vote import CommentVote
 
 from typing import Union
 
@@ -18,6 +19,16 @@ class Comment(db.Model):
 
     thread: Mapped["Thread"] = relationship("Thread", back_populates="comments")
     author: Mapped["User"] = relationship("User")
+
+    @property
+    def score(self) -> int:
+        upvotes = db.session.execute(
+            select(func.count("*")).select_from(CommentVote).where(CommentVote.comment_id == self.id, CommentVote.upvote == True)
+        ).scalar()
+        downvotes = db.session.execute(
+            select(func.count("*")).select_from(CommentVote).where(CommentVote.comment_id == self.id, CommentVote.upvote == False)
+        ).scalar()
+        return upvotes - downvotes
 
     def __init__(self, author_id: int, thread_id: int, content: str, parent_id: Union[int, None] = None):
         self.author_id = author_id
@@ -35,13 +46,3 @@ class Comment(db.Model):
 
     def __repr__(self):
         return f"<Comment id={self.id!r}, author_id={self.author_id!r}, thread_id={self.thread_id!r} content={self.content!r}>"
-
-    def serialize(self):
-        return {
-            "id": self.id,
-            "author_id": self.author_id if not self.deleted else None,
-            "author_username": self.author.username if not self.deleted else None,
-            "thread_id": self.thread_id,
-            "content": self.content if not self.deleted else None,
-            "deleted": self.deleted,
-        }

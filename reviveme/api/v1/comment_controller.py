@@ -4,14 +4,16 @@ from typing import Any, List
 from flask import Response, jsonify, request
 
 from reviveme import db
-from reviveme.models import Comment, Thread, CommentVote
+from reviveme.models import CommentVote
+from reviveme.models.thread import Thread
+from reviveme.models.comment import Comment
 
-from marshmallow import Schema, fields, post_load, validate, validates, ValidationError
+from marshmallow import Schema, fields, post_load, post_dump, validate, validates, ValidationError
 from sqlalchemy import select, func
 
 from . import bp
 
-class CommentSchema(Schema):
+class CommentRequestSchema(Schema):
     content = fields.Str(required=True, validate=validate.Length(min=1))
     parent_id = fields.Int()
     author_id = fields.Int(required=True) # TODO: get author_id from token once auth is implemented
@@ -25,7 +27,24 @@ class CommentSchema(Schema):
 
     @post_load
     def make_comment(self, data, **kwargs) -> Comment:
-        return Comment(**data, thread_id=self.thread_id)
+        return Comment(**data, thread_id=self.context['thread_id'])
+
+class CommentResponseSchema(Schema):
+    id = fields.Int()
+    author_username = fields.Function(lambda obj: obj.author.username if not obj.deleted else None)
+    thread_id = fields.Int()
+    content = fields.Function(lambda obj: obj.content if not obj.deleted else None)
+    deleted = fields.Bool()
+    score = fields.Int()
+
+    @post_dump(pass_original=True)
+    def append_vote_data(self, data, comment: Comment, **kwargs):
+        upvoted, downvoted = get_comment_upvoted(comment.id, user_id=self.context['user_id'])
+        return {
+            **data,
+            'upvoted': upvoted,
+            'downvoted': downvoted,
+        }
 
 class CommentNode:
     '''
@@ -38,24 +57,11 @@ class CommentNode:
     def add_child(self, node: CommentNode):
         self.children.append(node)
 
-    def serialize(self):
-        upvoted, downvoted = get_comment_upvoted(self.comment.id, user_id=1) # TODO: get actual user id value
+    def serialize(self, schema: CommentResponseSchema):
         return {
-            **self.comment.serialize(),
-            "score": get_comment_score(self.comment.id),
-            "upvoted": upvoted,
-            "downvoted": downvoted,
-            "children": [child.serialize() for child in self.children]
+            **schema.dump(self.comment),
+            'children': [child.serialize(schema) for child in self.children]
         }
-
-def get_comment_score(comment_id):
-    upvotes = db.session.execute(
-        select(func.count("*")).select_from(CommentVote).where(CommentVote.comment_id == comment_id, CommentVote.upvote == True)
-    ).scalar()
-    downvotes = db.session.execute(
-        select(func.count("*")).select_from(CommentVote).where(CommentVote.comment_id == comment_id, CommentVote.upvote == False)
-    ).scalar()
-    return upvotes - downvotes
 
 def get_comment_upvoted(comment_id, user_id):
     upvote_db_val: bool = db.session.execute(
@@ -96,16 +102,14 @@ def comment_list(thread_id):
         prev_level_comments = new_nodes
         depth += 1
 
-    return [comment.serialize() for comment in top_level_comments]
+    schema = CommentResponseSchema(context={'user_id': 1})
+    return [node.serialize(schema) for node in top_level_comments]
 
 
 @bp.route("/comments/<int:comment_id>", methods=["GET"])
 def comment_detail(comment_id):
     comment = db.get_or_404(Comment, comment_id)
-    data = comment.serialize()
-    data["score"] = get_comment_score(comment_id)
-    data["upvoted"], data["downvoted"] = get_comment_upvoted(comment_id, user_id=1) # TODO: get actual user id value
-    return data
+    return CommentResponseSchema(context={'user_id': 1}).dump(comment)
 
 
 @bp.route("/threads/<int:thread_id>/comments", methods=["POST"])
@@ -114,9 +118,7 @@ def comment_create(thread_id):
     if db.session.get(Thread, thread_id) is None:
         return Response(f"Thread with id {thread_id} not found", status=404)
 
-    schema = CommentSchema()
-    # TODO: get author_id from token once auth is implemented
-    schema.thread_id = thread_id
+    schema = CommentRequestSchema(context={'thread_id': thread_id})
     comment = schema.load(data)
     db.session.add(comment)
     db.session.commit()
@@ -131,7 +133,7 @@ def comment_update(comment_id):
 
     data: Any = request.json
 
-    errors = CommentSchema().validate(data, partial=("content",))
+    errors = CommentRequestSchema().validate(data, partial=("content",))
     if errors:
         return jsonify(errors), 400
 

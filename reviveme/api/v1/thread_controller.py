@@ -2,10 +2,9 @@ from flask import Response, request, jsonify
 from marshmallow import Schema, fields, post_load, post_dump, validate
 from sqlalchemy import select, func
 
-import copy
-
 from reviveme import db
-from reviveme.models import Thread, ThreadVote
+from reviveme.models import ThreadVote
+from reviveme.models.thread import Thread
 from . import bp
 
 
@@ -24,9 +23,6 @@ class ThreadResponseSchema(Schema):
     title = fields.Function(lambda obj: obj.title if not obj.deleted else None)
     content = fields.Function(lambda obj: obj.content if not obj.deleted else None)
     deleted = fields.Bool(required=True)
-
-    upvoted = fields.Bool()
-    downvoted = fields.Bool()
     score = fields.Int()
 
     @post_dump(pass_original=True)
@@ -38,18 +34,7 @@ class ThreadResponseSchema(Schema):
             **data,
             'upvoted': upvoted,
             'downvoted': downvoted,
-            'score': get_thread_score(thread_id=thread.id)
         }
-
-
-def get_thread_score(thread_id):
-    upvotes = db.session.execute(
-        select(func.count("*")).select_from(ThreadVote).where(ThreadVote.thread_id == thread_id, ThreadVote.upvote == True)
-    ).scalar()
-    downvotes = db.session.execute(
-        select(func.count("*")).select_from(ThreadVote).where(ThreadVote.thread_id == thread_id, ThreadVote.upvote == False)
-    ).scalar()
-    return upvotes - downvotes
 
 def get_thread_upvoted(thread_id, user_id):
     upvote_db_val: bool = db.session.execute(
