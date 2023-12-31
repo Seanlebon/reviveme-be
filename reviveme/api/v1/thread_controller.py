@@ -1,6 +1,6 @@
 from flask import Response, request, jsonify
 from marshmallow import Schema, fields, post_load, post_dump, validate
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from reviveme import db
 from reviveme.models import ThreadVote

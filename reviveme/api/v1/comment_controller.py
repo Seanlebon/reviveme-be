@@ -9,7 +9,7 @@ from reviveme.models.thread import Thread
 from reviveme.models.comment import Comment
 
 from marshmallow import Schema, fields, post_load, post_dump, validate, validates, ValidationError
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from . import bp
 
