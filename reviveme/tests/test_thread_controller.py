@@ -1,7 +1,7 @@
 import pytest
 
 from reviveme.db import db
-from reviveme.models import Thread
+from reviveme.models.thread import Thread
 
 class TestThreadController():
     @pytest.fixture()
