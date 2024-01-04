@@ -1,7 +1,9 @@
 import pytest
+from reviveme.api.v1.comment_controller import CommentResponseSchema
 
 from reviveme.db import db
-from reviveme.models import Thread, Comment
+from reviveme.models.thread import Thread
+from reviveme.models.comment import Comment
 
 class TestCommentController:
     @pytest.fixture()
@@ -146,58 +148,63 @@ class TestCommentController:
         db.session.commit()
         return comments
 
-    def test_list_comments(self, client, comments):
+    def test_list_comments(self, user, client, comments):
         response = client.get(f'/api/v1/threads/{comments[0].thread.id}/comments')
         assert response.status_code == 200
-        assert response.json == [ {**comment.serialize(), "children": [], "score": 0} for comment in comments ]
 
-    def test_list_comments_multiple_threads(self, client, comments_on_multiple_threads):
+        schema = CommentResponseSchema(context={'user_id': user.id})
+        for comment, response_comment in zip(comments, response.json):
+            assert response_comment == {**schema.dump(comment), 'children': []}
+            assert response_comment['content'] == comment.content
+
+    def test_list_comments_multiple_threads(self, user, client, comments_on_multiple_threads):
         response = client.get(f'/api/v1/threads/{comments_on_multiple_threads[0].thread.id}/comments')
         assert response.status_code == 200
-        assert response.json == [ {**comments_on_multiple_threads[0].serialize(), "children": [], "score": 0} ]
+
+        schema = CommentResponseSchema(context={'user_id': user.id})
+        assert response.json == [ 
+            {**schema.dump(comments_on_multiple_threads[0]), "children": []}
+        ]
 
         response = client.get(f'/api/v1/threads/{comments_on_multiple_threads[1].thread.id}/comments')
         assert response.status_code == 200
-        assert response.json == [ {**comment.serialize(), "children": [], "score": 0} for comment in comments_on_multiple_threads[1:] ]
+        assert response.json == [ 
+            {**schema.dump(comment), "children": []} for comment in comments_on_multiple_threads[1:] 
+        ]
     
-    def test_list_comments_nested(self, client, nested_comments):
+    def test_list_comments_nested(self, user, client, nested_comments):
         top_level_comments, child_comments, grandchild_comments = nested_comments
         response = client.get(f'/api/v1/threads/{top_level_comments[0].thread_id}/comments')
         assert response.status_code == 200
 
+        schema = CommentResponseSchema(context={'user_id': user.id})
         expected_response = [
             {
-                **top_level_comments[0].serialize(),
+                **schema.dump(top_level_comments[0]),
                 "children": [
                     {
-                        **child_comments[0].serialize(),
+                        **schema.dump(child_comments[0]),
                         "children": [
                             {
-                                **grandchild_comments[0].serialize(),
+                                **schema.dump(grandchild_comments[0]),
                                 "children": [],
-                                "score": 0
                             }
                         ],
-                        "score": 0
                     },
                     {
-                        **child_comments[1].serialize(),
+                        **schema.dump(child_comments[1]),
                         "children": [],
-                        "score": 0
                     }
                 ],
-                "score": 0
             },
             {
-                **top_level_comments[1].serialize(),
+                **schema.dump(top_level_comments[1]),
                 "children": [
                     { 
-                        **child_comments[2].serialize(), 
+                        **schema.dump(child_comments[2]), 
                         "children": [], 
-                        "score": 0
                     }
                 ],
-                "score": 0
             }
         ]
         
@@ -207,10 +214,12 @@ class TestCommentController:
         response = client.get('/api/v1/threads/1/comments')
         assert response.status_code == 404
     
-    def test_get_comment(self, client, comment):
+    def test_get_comment(self, user, client, comment):
         response = client.get(f'/api/v1/comments/{comment.id}')
         assert response.status_code == 200
-        assert response.json == {**comment.serialize(), "score": 0}
+        schema = CommentResponseSchema(context={'user_id': user.id})
+        assert response.json == schema.dump(comment)
+        assert response.json['content'] == comment.content
 
     def test_get_comment_404(self, client):
         response = client.get('/api/v1/comments/1')
@@ -295,7 +304,7 @@ class TestCommentController:
         assert resp.status_code == 200
         assert resp.json["deleted"] == True
         assert resp.json["content"] == None
-        assert resp.json["author_id"] == None
+        assert resp.json["author_username"] == None
     
     def test_delete_comment_404(self, client):
         response = client.delete('/api/v1/comments/1')

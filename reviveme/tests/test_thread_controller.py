@@ -1,7 +1,8 @@
 import pytest
+from reviveme.api.v1.thread_controller import ThreadResponseSchema
 
 from reviveme.db import db
-from reviveme.models import Thread
+from reviveme.models.thread import Thread
 
 class TestThreadController():
     @pytest.fixture()
@@ -35,15 +36,24 @@ class TestThreadController():
         db.session.commit()
         return threads
 
-    def test_get_threads(self, client, threads):
+    def test_get_threads(self, user, client, threads):
         response = client.get('/api/v1/threads')
         assert response.status_code == 200
-        assert response.json == [{**thread.serialize(), "score": 0} for thread in threads]
+        
+        schema = ThreadResponseSchema(context={'user_id': user.id})
+        for thread, response_thread in zip(threads, response.json):
+            assert response_thread == schema.dump(thread)
+            assert response_thread['title'] == thread.title
+            assert response_thread['content'] == thread.content
 
-    def test_get_thread(self, client, thread):
+    def test_get_thread(self, user, client, thread):
         response = client.get(f'/api/v1/threads/{thread.id}')
         assert response.status_code == 200
-        assert response.json == {**thread.serialize(), "score": 0}
+
+        schema = ThreadResponseSchema(context={'user_id': user.id})
+        assert response.json == schema.dump(thread)
+        assert response.json['title'] == thread.title
+        assert response.json['content'] == thread.content
         
     def test_get_thread_404(self, client):
         response = client.get('/api/v1/threads/1')
@@ -125,8 +135,7 @@ class TestThreadController():
         response = client.get(f'/api/v1/threads/{thread.id}')
         assert response.status_code == 200
         assert response.json["deleted"] == True
-        assert response.json["author_id"] == None
-        assert response.json["author_name"] == None
+        assert response.json["author_username"] == None
         assert response.json["title"] == None
         assert response.json["content"] == None
 

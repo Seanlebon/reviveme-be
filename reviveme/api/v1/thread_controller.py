@@ -1,13 +1,14 @@
 from flask import Response, request, jsonify
-from marshmallow import Schema, fields, post_load, validate
-from sqlalchemy import select, func
+from marshmallow import Schema, fields, post_load, post_dump, validate
+from sqlalchemy import select
 
 from reviveme import db
-from reviveme.models import Thread, ThreadVote
+from reviveme.models import ThreadVote
+from reviveme.models.thread import Thread
 from . import bp
 
 
-class ThreadSchema(Schema):
+class ThreadRequestSchema(Schema):
     title = fields.Str(required=True, validate=validate.Length(min=1, max=255))
     content = fields.Str(required=True)
     author_id = fields.Int(required=True) # TODO: get author_id from token once auth is implemented
@@ -16,15 +17,24 @@ class ThreadSchema(Schema):
     def make_thread(self, data, **kwargs) -> Thread:
         return Thread(**data)
 
+class ThreadResponseSchema(Schema):
+    id = fields.Int()
+    author_username = fields.Function(lambda obj: obj.author.username if not obj.deleted else None)
+    title = fields.Function(lambda obj: obj.title if not obj.deleted else None)
+    content = fields.Function(lambda obj: obj.content if not obj.deleted else None)
+    deleted = fields.Bool(required=True)
+    score = fields.Int()
 
-def get_thread_score(thread_id):
-    upvotes = db.session.execute(
-        select(func.count("*")).select_from(ThreadVote).where(ThreadVote.thread_id == thread_id, ThreadVote.upvote == True)
-    ).scalar()
-    downvotes = db.session.execute(
-        select(func.count("*")).select_from(ThreadVote).where(ThreadVote.thread_id == thread_id, ThreadVote.upvote == False)
-    ).scalar()
-    return upvotes - downvotes
+    @post_dump(pass_original=True)
+    def append_vote_data(self, data, thread: Thread, **kwargs):
+        upvoted, downvoted = get_thread_upvoted(
+            thread.id, user_id=self.context['user_id']
+        )
+        return {
+            **data,
+            'upvoted': upvoted,
+            'downvoted': downvoted,
+        }
 
 def get_thread_upvoted(thread_id, user_id):
     upvote_db_val: bool = db.session.execute(
@@ -38,32 +48,20 @@ def get_thread_upvoted(thread_id, user_id):
 @bp.route("/threads", methods=["GET"])
 def thread_list():
     threads = db.session.execute(db.select(Thread).where(Thread.deleted == False)).scalars().all()
-    thread_dicts = [thread.serialize() for thread in threads]
 
-    # append vote and score data to results
-    for thread_dict in thread_dicts:
-        # TODO: get actual user id
-        upvoted, downvoted = get_thread_upvoted(thread_id=thread_dict['id'], user_id=1)
-        thread_dict['upvoted'] = upvoted
-        thread_dict['downvoted'] = downvoted
-        thread_dict['score'] = get_thread_score(thread_id=thread_dict['id'])
-    
-    return thread_dicts
+    schema = ThreadResponseSchema(context={'user_id': 1})
+    return [schema.dump(thread) for thread in threads]
 
 
 @bp.route("/threads/<int:id>", methods=["GET"])
 def thread_detail(id):
     thread = db.get_or_404(Thread, id)
-    resp_data = thread.serialize()
-    resp_data['score'] = get_thread_score(id)
-    # TODO: get actual user id
-    resp_data['upvoted'], resp_data['downvoted'] = get_thread_upvoted(thread_id=id, user_id=1)
-    return resp_data
+    return ThreadResponseSchema(context={'user_id': 1}).dump(thread)
 
 
 @bp.route("/threads", methods=["POST"])
 def thread_create():
-    schema = ThreadSchema()
+    schema = ThreadRequestSchema()
     thread = schema.load(request.get_json())
     db.session.add(thread)
     db.session.commit()
@@ -78,7 +76,7 @@ def thread_update(id):
 
     data = request.get_json()
 
-    errors = ThreadSchema().validate(data, partial=True)
+    errors = ThreadRequestSchema().validate(data, partial=True)
     if errors:
         return jsonify(errors), 400
 

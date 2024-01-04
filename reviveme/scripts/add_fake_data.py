@@ -7,7 +7,9 @@ from flask_migrate import upgrade
 from config import FLASK_APP
 from reviveme import create_app
 from reviveme.db import db
-from reviveme.models import Comment, Thread, User
+from reviveme.models import User
+from reviveme.models.thread import Thread
+from reviveme.models.comment import Comment
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

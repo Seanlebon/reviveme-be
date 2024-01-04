@@ -1,7 +1,8 @@
 import pytest
 
 from reviveme.db import db
-from reviveme.models import Thread, Comment
+from reviveme.models.thread import Thread
+from reviveme.models.comment import Comment
 
 class TestVoteController:
     """
