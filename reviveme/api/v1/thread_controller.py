@@ -23,6 +23,7 @@ class ThreadResponseSchema(Schema):
     title = fields.Function(lambda obj: obj.title if not obj.deleted else None)
     content = fields.Function(lambda obj: obj.content if not obj.deleted else None)
     deleted = fields.Bool(required=True)
+    created_at = fields.DateTime()
     score = fields.Int()
 
     @post_dump(pass_original=True)
