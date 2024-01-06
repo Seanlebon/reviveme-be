@@ -35,6 +35,7 @@ class CommentResponseSchema(Schema):
     thread_id = fields.Int()
     content = fields.Function(lambda obj: obj.content if not obj.deleted else None)
     deleted = fields.Bool()
+    created_at = fields.DateTime()
     score = fields.Int()
 
     @post_dump(pass_original=True)

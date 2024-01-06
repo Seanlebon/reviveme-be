@@ -1,4 +1,5 @@
-from sqlalchemy import ForeignKey, Text, Integer, Boolean, select, func
+from datetime import datetime
+from sqlalchemy import DateTime, ForeignKey, Text, Integer, Boolean, select, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Union
 
@@ -16,6 +17,7 @@ class Comment(db.Model):
     parent_id: Mapped[Union[int, None]] = mapped_column(ForeignKey("comments.id"))
     depth: Mapped[int] = mapped_column(Integer, default=1)
     deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     thread: Mapped["Thread"] = relationship("Thread", back_populates="comments")
     author: Mapped["User"] = relationship("User")
