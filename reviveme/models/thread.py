@@ -13,7 +13,7 @@ class Thread(db.Model):
     title: Mapped[str] = mapped_column(String(120))
     content: Mapped[str] = mapped_column(String(10000))
     deleted: Mapped[bool] = mapped_column(Boolean, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     comments: Mapped[List["Comment"]] = relationship("Comment", back_populates="thread")
     author: Mapped["User"] = relationship("User", back_populates="threads")
