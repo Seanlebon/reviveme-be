@@ -7,9 +7,10 @@ from reviveme import db
 from reviveme.models import CommentVote
 from reviveme.models.thread import Thread
 from reviveme.models.comment import Comment
+from reviveme.constants.params import SortParams
 
 from marshmallow import Schema, fields, post_load, post_dump, validate, validates, ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, desc, case
 
 from . import bp
 
@@ -73,18 +74,30 @@ def get_comment_upvoted(comment_id, user_id):
         return False, False
     return upvote_db_val, not upvote_db_val
 
+def generate_select_statement(thread_id, sort_by, depth=1):
+    '''
+    Generates a query to select all comments at a particular depth, ordering them according to the specified sorting method.
+    '''
+    select_statement = db.select(Comment).where(Comment.thread_id == thread_id).where(Comment.depth == depth)
+    if sort_by == SortParams.NEWEST:
+        select_statement = select_statement.order_by(Comment.created_at.desc())
+    elif sort_by == SortParams.TOP:
+        select_statement = select_statement.outerjoin(CommentVote, full=False).group_by(Comment.id).order_by(
+            desc(
+                db.func.sum(
+                    case((CommentVote.upvote == True, 1), (CommentVote.upvote == False, -1), else_=0)
+                )
+            )
+        )
+    return select_statement
+
 @bp.route("/threads/<int:thread_id>/comments", methods=["GET"])
 def comment_list(thread_id):
     db.get_or_404(Thread, thread_id) # 404 if thread doesn't exist
 
-    sort_by = request.args.get("sortby", "newest", type=str)
-
-    select_statement = db.select(Comment).where(Comment.thread_id == thread_id).where(Comment.depth == 1)
-    if sort_by == "newest":
-        select_statement = select_statement.order_by(Comment.created_at.desc())
-    elif sort_by == "top":
-        select_statement = select_statement.order_by(Comment.score.desc())
-
+    sort_by = request.args.get("sortby", SortParams.NEWEST, type=str)
+    
+    select_statement = generate_select_statement(thread_id, sort_by)
     comments = db.session.execute(select_statement).scalars().all()
     
     depth = 2 # start at depth 2 since we already got depth 1
@@ -94,12 +107,7 @@ def comment_list(thread_id):
     while len(comments) > 0:
         new_nodes = {}
 
-        select_statement = db.select(Comment).where(Comment.thread_id == thread_id).where(Comment.depth == depth)
-        if sort_by == "newest":
-            select_statement = select_statement.order_by(Comment.created_at.desc())
-        elif sort_by == "top":
-            select_statement = select_statement.order_by(Comment.score.desc())
-        
+        select_statement = generate_select_statement(thread_id, sort_by, depth)
         comments = db.session.execute(select_statement).scalars().all()
         
         for comment in comments:

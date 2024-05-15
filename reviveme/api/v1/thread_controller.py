@@ -5,6 +5,9 @@ from sqlalchemy import select, desc, case
 from reviveme import db
 from reviveme.models import ThreadVote
 from reviveme.models.thread import Thread
+
+from reviveme.constants.params import SortParams
+
 from . import bp
 
 
@@ -48,12 +51,12 @@ def get_thread_upvoted(thread_id, user_id):
 
 @bp.route("/threads", methods=["GET"])
 def thread_list():
-    sort_by = request.args.get("sortby", "newest", type=str)
+    sort_by = request.args.get("sortby", SortParams.NEWEST, type=str)
 
     select_statement = db.select(Thread).where(Thread.deleted == False)
-    if sort_by == "newest":
+    if sort_by == SortParams.NEWEST:
         select_statement = select_statement.order_by(desc(Thread.created_at))
-    elif sort_by == "top":
+    elif sort_by == SortParams.TOP:
         # left outer join on ThreadVote to get thread score
         select_statement = select_statement.outerjoin(ThreadVote, full=False).group_by(Thread.id).order_by(
             desc(
