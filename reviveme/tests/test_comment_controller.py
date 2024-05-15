@@ -1,9 +1,12 @@
+from datetime import datetime
+from typing import List
 import pytest
 from reviveme.api.v1.comment_controller import CommentResponseSchema
 
 from reviveme.db import db
 from reviveme.models.thread import Thread
 from reviveme.models.comment import Comment
+from reviveme.models.comment_vote import CommentVote
 
 class TestCommentController:
     @pytest.fixture()
@@ -120,10 +123,20 @@ class TestCommentController:
             )
         ]
         db.session.add_all(grandchild_comments)
-
         db.session.commit()
+
+        # upvote/downvote comments
+        votes = [
+            CommentVote(user_id=user.id, item_id=top_level_comments[1].id, upvote=True),
+            CommentVote(user_id=user.id, item_id=child_comments[1].id, upvote=True),
+            CommentVote(user_id=user.id, item_id=child_comments[0].id, upvote=False),
+            CommentVote(user_id=user.id, item_id=grandchild_comments[0].id, upvote=True)
+        ]
+        db.session.add_all(votes)
+        db.session.commit()
+
         return (top_level_comments, child_comments, grandchild_comments)
-    
+
     @pytest.fixture()
     def comments_on_multiple_threads(self, user, threads):
         comments = [
@@ -209,6 +222,34 @@ class TestCommentController:
         ]
         
         assert response.json == expected_response
+
+    def test_list_comments_sort_by_newest(self, user, client, nested_comments):
+        top_level_comments, child_comments, grandchild_comments = nested_comments
+        response = client.get(f'/api/v1/threads/{top_level_comments[0].thread_id}/comments?sort_by=newest')
+        assert response.status_code == 200
+
+        self.verify_sorted_by_newest(response.json)
+
+    def verify_sorted_by_newest(self, comments_json):
+        for i in range(1, len(comments_json)):
+            assert datetime.fromisoformat(comments_json[i]['created_at']) >= datetime.fromisoformat(comments_json[i - 1]['created_at'])
+        
+        for comment in comments_json:
+            self.verify_sorted_by_newest(comment['children'])
+        
+    def test_list_comments_sort_by_top(self, user, client, nested_comments):
+        top_level_comments, child_comments, grandchild_comments = nested_comments
+        response = client.get(f'/api/v1/threads/{top_level_comments[0].thread_id}/comments?sort_by=top')
+        assert response.status_code == 200
+
+        self.verify_sorted_by_top(response.json)
+
+    def verify_sorted_by_top(self, comments_json):
+        for i in range(1, len(comments_json)):
+            assert comments_json[i]['score'] >= comments_json[i - 1]['score']
+        
+        for comment in comments_json:
+            self.verify_sorted_by_top(comment['children'])
 
     def test_list_comments_404(self, client):
         response = client.get('/api/v1/threads/1/comments')

@@ -77,11 +77,16 @@ def get_comment_upvoted(comment_id, user_id):
 def comment_list(thread_id):
     db.get_or_404(Thread, thread_id) # 404 if thread doesn't exist
 
-    comments = (
-        db.session.execute(db.select(Comment).where(Comment.thread_id == thread_id).where(Comment.depth == 1))
-        .scalars()
-        .all()
-    )
+    sort_by = request.args.get("sortby", "newest", type=str)
+
+    select_statement = db.select(Comment).where(Comment.thread_id == thread_id).where(Comment.depth == 1)
+    if sort_by == "newest":
+        select_statement = select_statement.order_by(Comment.created_at.desc())
+    elif sort_by == "top":
+        select_statement = select_statement.order_by(Comment.score.desc())
+
+    comments = db.session.execute(select_statement).scalars().all()
+    
     depth = 2 # start at depth 2 since we already got depth 1
     top_level_comments = [CommentNode(comment) for comment in comments]
     # Save pointers to leaf nodes for easier insertion
@@ -89,11 +94,14 @@ def comment_list(thread_id):
     while len(comments) > 0:
         new_nodes = {}
 
-        comments = (
-            db.session.execute(db.select(Comment).where(Comment.thread_id == thread_id).where(Comment.depth == depth))
-            .scalars()
-            .all()
-        )
+        select_statement = db.select(Comment).where(Comment.thread_id == thread_id).where(Comment.depth == depth)
+        if sort_by == "newest":
+            select_statement = select_statement.order_by(Comment.created_at.desc())
+        elif sort_by == "top":
+            select_statement = select_statement.order_by(Comment.score.desc())
+        
+        comments = db.session.execute(select_statement).scalars().all()
+        
         for comment in comments:
             node = CommentNode(comment)
             parent = prev_level_comments[comment.parent_id]

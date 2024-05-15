@@ -10,9 +10,11 @@ def create_app(testing=False):
 
     if testing:
         app.config["TESTING"] = True
-        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite://"
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite://"        
     else:
         app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {'connect_args': {'options': '-c timezone=utc'}}
+        if app.config["ENVIRONMENT"] == 'development':
+            app.config["SQLALCHEMY_ENGINE_OPTIONS"]['echo'] = True
 
     db.init_app(app)
     migrate = Migrate(app, db)
