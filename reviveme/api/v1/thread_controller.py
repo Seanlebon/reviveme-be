@@ -1,10 +1,13 @@
 from flask import Response, request, jsonify
 from marshmallow import Schema, fields, post_load, post_dump, validate
-from sqlalchemy import select
+from sqlalchemy import select, desc, case
 
 from reviveme import db
 from reviveme.models import ThreadVote
 from reviveme.models.thread import Thread
+
+from reviveme.constants.params import SortParams
+
 from . import bp
 
 
@@ -48,7 +51,22 @@ def get_thread_upvoted(thread_id, user_id):
 
 @bp.route("/threads", methods=["GET"])
 def thread_list():
-    threads = db.session.execute(db.select(Thread).where(Thread.deleted == False)).scalars().all()
+    sort_by = request.args.get("sortby", SortParams.NEWEST, type=str)
+
+    select_statement = db.select(Thread).where(Thread.deleted == False)
+    if sort_by == SortParams.NEWEST:
+        select_statement = select_statement.order_by(desc(Thread.created_at))
+    elif sort_by == SortParams.TOP:
+        # left outer join on ThreadVote to get thread score
+        select_statement = select_statement.outerjoin(ThreadVote, full=False).group_by(Thread.id).order_by(
+            desc(
+                db.func.sum(
+                    case((ThreadVote.upvote == True, 1), (ThreadVote.upvote == False, -1), else_=0)
+                )
+            )
+        )
+
+    threads = db.session.execute(select_statement).scalars().all()
 
     schema = ThreadResponseSchema(context={'user_id': 1})
     return [schema.dump(thread) for thread in threads]

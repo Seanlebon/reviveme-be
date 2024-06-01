@@ -3,6 +3,7 @@ from reviveme.api.v1.thread_controller import ThreadResponseSchema
 
 from reviveme.db import db
 from reviveme.models.thread import Thread
+from reviveme.models.thread_vote import ThreadVote
 
 class TestThreadController():
     @pytest.fixture()
@@ -29,10 +30,34 @@ class TestThreadController():
                 author_id=user.id,
                 title="Test Thread 2",
                 content="Test Content 2"
-            )
+            ),
+            Thread(
+                author_id=user.id,
+                title="Test Thread 3",
+                content="Test Content 3"
+            ),
         ]
 
         db.session.add_all(threads)
+        db.session.commit()
+        return threads
+
+    @pytest.fixture()
+    def threads_with_votes(self, user, threads):
+        votes = [
+            ThreadVote(user_id=user.id, item_id=threads[0].id, upvote=False),
+            ThreadVote(user_id=user.id, item_id=threads[1].id, upvote=True),
+        ]
+        db.session.add_all(votes)
+        db.session.commit()
+
+        return threads
+
+    @pytest.fixture()
+    def spaced_out_threads(self, user, threads):
+        threads[2].created_at = threads[2].created_at.replace(year=2022)
+        threads[1].created_at = threads[1].created_at.replace(year=2021)
+        threads[0].created_at = threads[0].created_at.replace(year=2020)
         db.session.commit()
         return threads
 
@@ -45,6 +70,24 @@ class TestThreadController():
             assert response_thread == schema.dump(thread)
             assert response_thread['title'] == thread.title
             assert response_thread['content'] == thread.content
+
+    def test_get_threads_sortby_top(self, user, client, threads_with_votes):
+        response = client.get('/api/v1/threads?sortby=top')
+        assert response.status_code == 200
+        
+        schema = ThreadResponseSchema(context={'user_id': user.id})
+        assert response.json[0] == schema.dump(threads_with_votes[1])
+        assert response.json[1] == schema.dump(threads_with_votes[2])
+        assert response.json[2] == schema.dump(threads_with_votes[0])
+
+    def test_get_threads_sortby_newest(self, user, client, spaced_out_threads):
+        response = client.get('/api/v1/threads?sortby=newest')
+        assert response.status_code == 200
+        
+        schema = ThreadResponseSchema(context={'user_id': user.id})
+        assert response.json[0] == schema.dump(spaced_out_threads[2])
+        assert response.json[1] == schema.dump(spaced_out_threads[1])
+        assert response.json[2] == schema.dump(spaced_out_threads[0])
 
     def test_get_thread(self, user, client, thread):
         response = client.get(f'/api/v1/threads/{thread.id}')
