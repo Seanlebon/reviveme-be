@@ -54,3 +54,7 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+
+# Venv
+Scripts/
+pyvenv.cfg
